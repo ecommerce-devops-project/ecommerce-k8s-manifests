@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: ecommers-frontend
+  namespace: ecommerce
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: ecommers-frontend
+
+  template:
+    metadata:
+      labels:
+        app: ecommers-frontend
+
+    spec:
+      containers:
+        - name: ecommers-frontend
+          image: rahulpallavi/ecommers-frontend:latest
+          ports:
+            - containerPort: 80
