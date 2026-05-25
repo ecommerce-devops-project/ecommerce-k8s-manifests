@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: ecommerce-backend
+  namespace: ecommerce
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: ecommerce-backend
+
+  template:
+    metadata:
+      labels:
+        app: ecommerce-backend
+
+    spec:
+      containers:
+        - name: ecommerce-backend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+          ports:
+            - containerPort: {{ .Values.service.port }}
+
+          env:
+            - name: PORT
+              value: "{{ .Values.env.PORT }}"
+
+            - name: NODE_ENV
+              value: "{{ .Values.env.NODE_ENV }}"
+
+            - name: DB_USERNAME
+              value: "{{ .Values.secret.DB_USERNAME }}"
+
+            - name: DB_PASSWORD
+              value: "{{ .Values.secret.DB_PASSWORD }}"
+
+            - name: JWT_SECRET
+              value: "{{ .Values.secret.JWT_SECRET }}"
+
+          volumeMounts:
+            - name: ecommerce-storage
+              mountPath: /data
+
+      volumes:
+        - name: ecommerce-storage
+          persistentVolumeClaim:
+            claimName: ecommerce-backend-pvc

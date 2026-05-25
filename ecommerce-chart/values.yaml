@@ -1,0 +1,27 @@
+replicaCount: 2
+
+image:
+  repository: rahulpallavi/ecommerce-backend
+  tag: latest
+
+service:
+  port: 3000
+
+env:
+  PORT: "3000"
+  NODE_ENV: "development"
+
+secret:
+  DB_USERNAME: "admin"
+  DB_PASSWORD: "password123"
+  JWT_SECRET: "ecommerce-jwt-secret"
+
+frontend:
+  replicaCount: 1
+
+  image:
+    repository: rahulpallavi/ecommers-frontend
+    tag: latest
+
+  service:
+    port: 80
