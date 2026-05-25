@@ -37,3 +37,30 @@ spec:
                 configMapKeyRef:
                   name: ecommerce-backend-config
                   key: NODE_ENV
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-backend-secret
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-backend-secret
+                  key: DB_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-backend-secret
+                  key: JWT_SECRET
+
+          volumeMounts:
+            - name: ecommerce-storage
+              mountPath: /data
+
+      volumes:
+        - name: ecommerce-storage
+          persistentVolumeClaim:
+            claimName: ecommerce-backend-pvc
