@@ -6,7 +6,7 @@ metadata:
   namespace: ecommerce
 
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.backend.replicaCount }}
 
   selector:
     matchLabels:
@@ -20,26 +20,26 @@ spec:
     spec:
       containers:
         - name: ecommerce-backend
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
 
           ports:
-            - containerPort: {{ .Values.service.port }}
+            - containerPort: {{ .Values.backend.service.port }}
 
           env:
             - name: PORT
-              value: "{{ .Values.env.PORT }}"
+              value: "{{ .Values.backend.env.PORT }}"
 
             - name: NODE_ENV
-              value: "{{ .Values.env.NODE_ENV }}"
+              value: "{{ .Values.backend.env.NODE_ENV }}"
 
             - name: DB_USERNAME
-              value: "{{ .Values.secret.DB_USERNAME }}"
+              value: "{{ .Values.backend.secret.DB_USERNAME }}"
 
             - name: DB_PASSWORD
-              value: "{{ .Values.secret.DB_PASSWORD }}"
+              value: "{{ .Values.backend.secret.DB_PASSWORD }}"
 
             - name: JWT_SECRET
-              value: "{{ .Values.secret.JWT_SECRET }}"
+              value: "{{ .Values.backend.secret.JWT_SECRET }}"
 
           volumeMounts:
             - name: ecommerce-storage
