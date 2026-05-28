@@ -25,6 +25,20 @@ spec:
           ports:
             - containerPort: {{ .Values.backend.service.port }}
 
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.service.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
           env:
             - name: PORT
               value: "{{ .Values.backend.env.PORT }}"
