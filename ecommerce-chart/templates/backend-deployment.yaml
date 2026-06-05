@@ -39,6 +39,15 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 10
 
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
           env:
             - name: PORT
               value: "{{ .Values.backend.env.PORT }}"
