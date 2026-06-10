@@ -1,12 +1,32 @@
-apiVersion: v1
-kind: Pod
+# apiVersion: v1
+# kind: Pod
 
-metadata:
-  name: crashloop-demo
-  namespace: ecommerce
+# metadata:
+#   name: crashloop-demo
+#   namespace: ecommerce
 
-spec:
-  containers:
-  - name: crashloop-container
-    image: busybox
-    command: ["sh", "-c", "exit 1"]
+# spec:
+#   containers:
+#   - name: crashloop-container
+#     image: busybox
+#     command: ["sh", "-c", "exit 1"]
+
+
+# Pod is in CrashLoopBackOff. What do you do?
+
+# Answer:
+
+# 1. Check pod status:
+#    kubectl get pods
+
+# 2. Describe pod:
+#    kubectl describe pod <pod>
+
+# 3. Check logs:
+#    kubectl logs <pod>
+
+# 4. Review events and container exit code
+
+# 5. Fix application/configuration issue
+
+# 6. Redeploy and verify pod is Running 

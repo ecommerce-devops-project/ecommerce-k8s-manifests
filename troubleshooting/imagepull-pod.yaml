@@ -1,14 +1,14 @@
-apiVersion: v1
-kind: Pod
+# apiVersion: v1
+# kind: Pod
 
-metadata:
-  name: imagepull-demo
-  namespace: ecommerce
+# metadata:
+#   name: imagepull-demo
+#   namespace: ecommerce
 
-spec:
-  containers:
-  - name: imagepull-container
-    image: busybox:does-not-exist
+# spec:
+#   containers:
+#   - name: imagepull-container
+#     image: busybox:does-not-exist
 
 
 
