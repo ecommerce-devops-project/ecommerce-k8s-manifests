@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: crashloop-demo
+  namespace: ecommerce
+
+spec:
+  containers:
+  - name: crashloop-container
+    image: busybox
+    command: ["sh", "-c", "exit 1"]
