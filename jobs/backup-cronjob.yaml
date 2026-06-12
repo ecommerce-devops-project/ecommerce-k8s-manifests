@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: backup-cronjob
+  namespace: ecommerce
+
+spec:
+  schedule: "* * * * *"
+
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+
+            image: busybox
+
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Database backup started"
+              date
+              echo "Backup completed"
+
+          restartPolicy: Never
