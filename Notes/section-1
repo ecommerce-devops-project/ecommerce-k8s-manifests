@@ -1,0 +1,1134 @@
+SECTION 1: KUBERNETES OVERVIEW & ARCHITECTURE
+Kubernetes
+What is Kubernetes?
+
+Kubernetes (K8s) is an open-source container orchestration platform used to deploy, manage, scale, monitor, and maintain containerized applications.
+
+It automates:
+
+Deployment
+Scaling
+Self-healing
+Service discovery
+Load balancing
+Rolling updates
+Why Kubernetes?
+
+Without Kubernetes:
+
+Application Crash
+      ↓
+Manual Restart
+
+With Kubernetes:
+
+Application Crash
+      ↓
+Pod Fails
+      ↓
+Kubernetes Detects Failure
+      ↓
+New Pod Created Automatically
+Ecommerce Project Example
+
+Our project contains:
+
+Angular Frontend
+Node.js Backend
+MySQL Database
+
+Kubernetes manages all these components.
+
+Kubernetes Architecture
+High Level Architecture
++--------------------------------+
+|        Control Plane           |
++--------------------------------+
+| API Server                     |
+| Scheduler                      |
+| Controller Manager             |
+| etcd                           |
++--------------------------------+
+              |
+              |
+              v
++--------------------------------+
+|         Worker Node            |
++--------------------------------+
+| kubelet                        |
+| kube-proxy                     |
+| Container Runtime              |
+| Pods                           |
++--------------------------------+
+Control Plane Components
+API Server
+What is it?
+
+API Server is the entry point of Kubernetes.
+
+Every kubectl command communicates with the API Server.
+
+Example
+kubectl get pods
+
+Flow:
+
+kubectl
+   ↓
+API Server
+   ↓
+Returns Pod Information
+Scheduler
+What is it?
+
+Scheduler decides:
+
+Which Pod
+should run on
+which Node
+Example
+
+You have:
+
+Node-1
+Node-2
+Node-3
+
+You create:
+
+Frontend Pod
+Backend Pod
+Database Pod
+
+Scheduler places them on nodes based on:
+
+CPU
+Memory
+Taints
+Affinity Rules
+Interview Question
+
+Q: Who decides which node a pod runs on?
+
+Answer:
+
+The Kubernetes Scheduler evaluates available nodes and schedules the pod based on resource availability and scheduling rules.
+
+Controller Manager
+What is it?
+
+Maintains the desired state.
+
+Example:
+
+Desired:
+
+2 Backend Pods
+
+Actual:
+
+1 Backend Pod
+
+Controller Manager creates:
+
+1 Additional Pod
+Interview Question
+
+Q: What happens when a pod crashes?
+
+Answer:
+
+The Controller Manager detects the difference between desired and actual state and recreates the missing pod.
+
+etcd
+What is it?
+
+Distributed key-value database.
+
+Stores:
+
+Pods
+Deployments
+Services
+Secrets
+ConfigMaps
+Cluster State
+Important Interview Question
+
+Q: What happens if etcd is lost?
+
+Answer:
+
+Kubernetes loses cluster state information. Pods may continue running temporarily, but cluster management becomes impossible. Regular etcd backups are critical.
+
+Worker Node Components
+kubelet
+
+Agent running on every node.
+
+Responsibilities:
+
+Receives instructions from API Server
+Creates Pods
+Monitors Pod health
+kube-proxy
+
+Responsible for networking.
+
+Handles:
+
+Service routing
+Load balancing
+Container Runtime
+
+Runs containers.
+
+Examples:
+
+Docker
+containerd
+CRI-O
+Commands
+
+Check Cluster Information
+
+kubectl cluster-info
+
+Check Nodes
+
+kubectl get nodes
+
+Detailed Node Information
+
+kubectl describe node minikube
+
+View System Pods
+
+kubectl get pods -n kube-system
+
+Check Kubernetes Version
+
+kubectl version
+Interview Questions
+Q1. What is Kubernetes?
+
+Kubernetes is an open-source container orchestration platform used to automate deployment, scaling, networking, and management of containerized applications.
+
+Q2. What are Control Plane Components?
+API Server
+Scheduler
+Controller Manager
+etcd
+Q3. What is etcd?
+
+etcd is a distributed key-value database that stores the entire Kubernetes cluster state.
+
+Q4. What is kubelet?
+
+kubelet is an agent running on every node that ensures containers are running correctly.
+
+Q5. What is kube-proxy?
+
+kube-proxy handles networking and service routing inside the Kubernetes cluster.
+
+Q6. Explain Kubernetes Architecture using your project.
+
+Answer:
+
+In our ecommerce project:
+
+Angular Frontend
+Node.js Backend
+MySQL Database
+
+These applications run as Pods on Kubernetes worker nodes.
+
+The Control Plane manages scheduling, monitoring, scaling, and recovery.
+
+Services provide stable networking.
+
+Ingress routes traffic to frontend and backend.
+
+GitHub Actions + Helm perform deployments.
+
+.............................................
+SECTION 2: PODS → REPLICASETS → DEPLOYMENTS → ROLLING UPDATES → ROLLBACKS
+Pods
+What is a Pod?
+
+A Pod is the smallest deployable unit in Kubernetes.
+
+A Pod can contain:
+
+One Container
+OR
+Multiple Containers
+
+Most commonly:
+
+1 Pod = 1 Container
+Why Pods?
+
+Kubernetes does not manage containers directly.
+
+It manages Pods.
+
+Container
+    ↓
+Pod
+    ↓
+Kubernetes
+Ecommerce Example
+
+Frontend:
+
+frontend-pod
+   |
+   +-- Angular Container
+
+Backend:
+
+backend-pod
+   |
+   +-- Node.js Container
+
+Database:
+
+mysql-pod
+   |
+   +-- MySQL Container
+Pod Lifecycle
+Pending
+   ↓
+ContainerCreating
+   ↓
+Running
+   ↓
+Succeeded / Failed
+Common Pod States
+Pending
+
+Pod created but not scheduled.
+
+Example:
+
+Insufficient CPU
+Node Affinity Mismatch
+Taint Issue
+Running
+
+Application is healthy.
+
+Failed
+
+Application crashed.
+
+Completed
+
+Usually Jobs or CronJobs.
+
+Example:
+
+Database Backup Job
+Commands
+
+Get Pods
+
+kubectl get pods
+
+Get Pod Details
+
+kubectl describe pod POD_NAME
+
+Get Logs
+
+kubectl logs POD_NAME
+
+Get Pod IP
+
+kubectl get pod -o wide
+
+Delete Pod
+
+kubectl delete pod POD_NAME
+Interview Questions
+Q1. What is a Pod?
+
+Answer:
+
+A Pod is the smallest deployable unit in Kubernetes that encapsulates one or more containers.
+
+Q2. Can a Pod contain multiple containers?
+
+Answer:
+
+Yes. Multiple containers can share storage and networking inside a Pod.
+
+ReplicaSets
+What is ReplicaSet?
+
+ReplicaSet ensures a fixed number of Pods are running.
+
+Example:
+
+Desired:
+
+2 Backend Pods
+
+Actual:
+
+1 Backend Pod
+
+ReplicaSet creates:
+
+1 New Backend Pod
+Why ReplicaSet?
+
+Provides:
+
+Self-Healing
+Availability
+High Availability
+Ecommerce Example
+replicas: 2
+
+Result:
+
+backend-pod-1
+backend-pod-2
+Commands
+
+Get ReplicaSets
+
+kubectl get rs
+
+Describe ReplicaSet
+
+kubectl describe rs
+Interview Question
+Q3. Do we create ReplicaSets directly?
+
+Answer:
+
+Usually no.
+
+Deployments automatically create and manage ReplicaSets.
+
+Deployments
+What is Deployment?
+
+Deployment manages stateless applications.
+
+Examples:
+
+Frontend
+Backend
+API Services
+Why Deployment?
+
+Provides:
+
+Scaling
+Self-Healing
+Rolling Updates
+Rollbacks
+Ecommerce Example
+
+Backend Deployment:
+
+replicas: 2
+
+Result:
+
+backend-pod-1
+backend-pod-2
+Deployment Architecture
+Deployment
+     ↓
+ReplicaSet
+     ↓
+Pods
+Commands
+
+View Deployments
+
+kubectl get deployments
+
+Describe Deployment
+
+kubectl describe deployment ecommerce-backend
+
+Scale Deployment
+
+kubectl scale deployment ecommerce-backend \
+--replicas=4 \
+-n ecommerce
+Self-Healing Example
+
+Delete Pod:
+
+kubectl delete pod POD_NAME
+
+Kubernetes creates:
+
+New Pod Automatically
+Interview Question
+Q4. What happens when a Deployment Pod crashes?
+
+Answer:
+
+ReplicaSet detects the missing Pod and creates a replacement Pod automatically.
+
+Rolling Updates
+What is Rolling Update?
+
+Update application without downtime.
+
+Old Pods replaced gradually.
+
+Example
+
+Current Version:
+
+Backend v1
+
+Deploy New Version:
+
+Backend v2
+
+Process:
+
+v1 Pod
+v1 Pod
+
+↓
+
+v2 Pod
+v1 Pod
+
+↓
+
+v2 Pod
+v2 Pod
+
+Users experience:
+
+Zero Downtime
+Strategy Used in Your Project
+
+Check:
+
+kubectl get deployment ecommerce-backend \
+-n ecommerce -o yaml
+
+You observed:
+
+strategy:
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+Meaning
+maxSurge
+
+Extra Pods allowed during update.
+
+Example:
+
+Current Pods = 4
+
+maxSurge = 25%
+
+Extra = 1 Pod
+
+Temporary:
+
+5 Pods
+maxUnavailable
+
+Maximum unavailable Pods.
+
+Example:
+
+4 Pods
+
+25% = 1 Pod
+
+Only 1 pod can be unavailable.
+
+Commands
+
+Watch Rollout
+
+kubectl rollout status deployment/ecommerce-backend
+
+Rollout History
+
+kubectl rollout history deployment/ecommerce-backend
+Interview Question
+Q5. What is Rolling Update?
+
+Answer:
+
+Rolling Update gradually replaces old Pods with new Pods while keeping the application available.
+
+Rollbacks
+What is Rollback?
+
+Revert application to previous version.
+
+Example
+
+Deploy:
+
+Backend v2
+
+Bug found:
+
+Users cannot login
+
+Rollback:
+
+Back to v1
+Commands
+
+Deployment Rollback
+
+kubectl rollout undo deployment/ecommerce-backend
+Check Revision History
+kubectl rollout history deployment/ecommerce-backend
+Helm Rollback (Your Project)
+
+Check History:
+
+helm history ecommerce -n ecommerce
+
+Rollback:
+
+helm rollback ecommerce 25 -n ecommerce
+
+You already practiced:
+
+helm history
+helm status
+helm rollback
+Interview Question
+Q6. Difference between Kubernetes Rollback and Helm Rollback?
+
+Answer:
+
+Kubernetes rollback reverts Deployment revisions.
+
+Helm rollback reverts the entire Helm release including Deployments, Services, ConfigMaps, and other resources.
+
+Real Interview Scenario
+Q7. User reports backend is down. What will you check?
+
+Answer:
+
+Check Pods
+kubectl get pods
+Describe Pod
+kubectl describe pod POD_NAME
+Check Logs
+kubectl logs POD_NAME
+Check Deployment
+kubectl get deployment
+Check Events
+kubectl get events
+Quick Revision
+Resource	Purpose
+Pod	Smallest deployable unit
+ReplicaSet	Maintains pod count
+Deployment	Manages stateless apps
+Rolling Update	Zero-downtime upgrades
+Rollback	Restore previous version
+Ecommerce Project Mapping
+Deployment
+     ↓
+ReplicaSet
+     ↓
+Backend Pods (2)
+
+Frontend Deployment
+     ↓
+Frontend Pod
+
+Rolling Update
+     ↓
+New Docker Image
+     ↓
+Helm Upgrade
+     ↓
+Zero Downtime Deployment  
+
+.........................................................
+SECTION 3: SERVICES → DNS → SERVICE DISCOVERY → CLUSTERIP → NODEPORT → INGRESS
+Why Services?
+
+Pods are temporary.
+
+Example:
+
+backend-pod-1
+IP = 10.244.0.10
+
+Pod crashes:
+
+backend-pod-2
+IP = 10.244.0.25
+
+Problem:
+
+Frontend still trying to call:
+
+10.244.0.10
+
+Application breaks.
+
+Solution
+
+Use a Service.
+
+Service provides:
+
+Permanent Name
+Permanent IP
+Load Balancing
+Service Discovery
+Service Architecture
+Frontend Pod
+      |
+      |
+      v
+ecommerce-backend-service
+      |
+      |
+      +----------------+
+      |                |
+      v                v
+Backend Pod-1    Backend Pod-2
+What is a Service?
+
+A Service is a stable network endpoint that exposes one or more Pods.
+
+Ecommerce Example
+
+Instead of calling:
+
+10.244.0.10
+10.244.0.11
+
+Frontend calls:
+
+ecommerce-backend-service
+
+Kubernetes routes traffic automatically.
+
+How Service Finds Pods
+
+Using Labels.
+
+Backend Pods:
+
+labels:
+  app: ecommerce-backend
+
+Service:
+
+selector:
+  app: ecommerce-backend
+Visual Flow
+Service Selector
+      |
+      |
+app=ecommerce-backend
+      |
+      |
+      +------------+
+      |            |
+      v            v
+Backend Pod   Backend Pod
+Service Types
+
+Kubernetes supports:
+
+ClusterIP
+NodePort
+LoadBalancer
+ExternalName
+
+For interviews:
+
+ClusterIP
+NodePort
+LoadBalancer
+
+are most important.
+
+ClusterIP
+What is ClusterIP?
+
+Default Service Type.
+
+Accessible only inside the cluster.
+
+Ecommerce Example
+
+Backend Service:
+
+type: ClusterIP
+
+Frontend can access:
+
+ecommerce-backend-service
+
+Browser cannot.
+
+Architecture
+Frontend Pod
+      |
+      |
+      v
+Backend Service
+      |
+      |
+      v
+Backend Pods
+Commands
+
+Get Services
+
+kubectl get svc
+
+Describe Service
+
+kubectl describe svc ecommerce-backend-service
+Interview Question
+Q1. What is ClusterIP?
+
+Answer:
+
+ClusterIP exposes a service internally within the Kubernetes cluster and is the default service type.
+
+DNS & Service Discovery
+What is Service Discovery?
+
+Pods don't need IP addresses.
+
+They use Service Names.
+
+Example
+
+Instead of:
+
+10.109.117.22
+
+Use:
+
+ecommerce-backend-service
+Kubernetes DNS
+
+CoreDNS automatically creates DNS records.
+
+Example:
+
+ecommerce-backend-service
+
+or
+
+ecommerce-backend-service.ecommerce.svc.cluster.local
+DNS Test (You Practiced This)
+
+Create Test Pod:
+
+kubectl run test-pod \
+--image=busybox \
+-it \
+--rm \
+-n ecommerce -- sh
+
+Inside Pod:
+
+wget -qO- http://ecommerce-backend-service:3000
+
+Output:
+
+Backend is running 🚀
+Interview Question
+Q2. How does Kubernetes Service Discovery work?
+
+Answer:
+
+CoreDNS automatically creates DNS entries for Services. Pods communicate using service names instead of IP addresses.
+
+NodePort
+What is NodePort?
+
+Exposes Service outside the cluster.
+
+Example
+
+Your Backend Service:
+
+3000:30123/TCP
+
+Meaning:
+
+Container Port = 3000
+
+Node Port = 30123
+Your Actual Output
+kubectl get svc -n ecommerce
+ecommerce-backend-service
+3000:30123/TCP
+
+ecommers-frontend-service
+80:31942/TCP
+Access Flow
+Browser
+    |
+    |
+NodeIP:30123
+    |
+    |
+Backend Service
+    |
+    |
+Backend Pods
+NodePort Range
+
+Default:
+
+30000 - 32767
+Interview Question
+Q3. What is NodePort?
+
+Answer:
+
+NodePort exposes a Kubernetes service on a static port of every node, allowing external access.
+
+Load Balancing
+What Happens When Multiple Pods Exist?
+
+Example:
+
+Backend Pod-1
+Backend Pod-2
+
+Service distributes traffic:
+
+Request 1 → Pod-1
+Request 2 → Pod-2
+Request 3 → Pod-1
+Request 4 → Pod-2
+Why?
+
+Provides:
+
+Scalability
+High Availability
+Fault Tolerance
+Interview Question
+Q4. How does Kubernetes load balancing work?
+
+Answer:
+
+Services distribute incoming requests among matching Pods using kube-proxy.
+
+Endpoints
+What are Endpoints?
+
+Endpoints show which Pods a Service is routing traffic to.
+
+Command
+kubectl get endpoints
+Example
+
+You saw:
+
+backend-bluegreen-service
+
+10.244.0.235:80
+10.244.0.236:80
+
+Meaning:
+
+Service Routes To:
+
+Pod 1
+Pod 2
+Interview Question
+Q5. What are Kubernetes Endpoints?
+
+Answer:
+
+Endpoints represent the actual Pod IPs behind a Service.
+
+Ingress
+Problem Without Ingress
+
+Suppose:
+
+Frontend Service
+Backend Service
+Admin Service
+
+Each needs:
+
+Separate NodePort
+Separate Load Balancer
+
+Expensive and difficult.
+
+Solution
+
+Ingress
+
+What is Ingress?
+
+Ingress provides a single entry point into the cluster.
+
+Your Ecommerce Ingress
+rules:
+
+  - path: /
+    backend:
+      service:
+        name: ecommers-frontend-service
+
+  - path: /api
+    backend:
+      service:
+        name: ecommerce-backend-service
+Request Flow
+User
+   |
+   |
+Ingress
+   |
+   +------> /
+   |          |
+   |          v
+   |      Frontend
+   |
+   +------> /api
+              |
+              v
+           Backend
+Real World Example
+amazon.com
+        |
+        |
+        +--> /
+        |
+        +--> /products
+        |
+        +--> /cart
+        |
+        +--> /payments
+
+Single domain.
+
+Multiple services.
+
+Commands
+
+Get Ingress
+
+kubectl get ingress
+
+Describe Ingress
+
+kubectl describe ingress ecommerce-ingress
+Interview Question
+Q6. Difference Between Service and Ingress?
+Service	Ingress
+Exposes Pods	Exposes Services
+Internal/External access	HTTP/HTTPS Routing
+One Service at a time	Multiple Services
+Layer 4	Layer 7
+Real Interview Scenario
+Q7. Frontend Cannot Reach Backend. What Will You Check?
+Service Exists
+kubectl get svc
+Endpoints Exist
+kubectl get endpoints
+Pod Running
+kubectl get pods
+DNS Working
+kubectl exec -it POD_NAME -- sh
+wget -qO- http://ecommerce-backend-service:3000
+Ingress Working
+kubectl get ingress
+Most Asked Interview Questions
+Q8. Why not use Pod IP directly?
+
+Answer:
+
+Pod IPs change when Pods restart. Services provide a stable endpoint.
+
+Q9. What component provides DNS?
+
+Answer:
+
+CoreDNS.
+
+Q10. What is kube-proxy?
+
+Answer:
+
+kube-proxy manages Service networking and load balancing.
+
+Q11. Difference Between ClusterIP and NodePort?
+ClusterIP	NodePort
+Internal Only	External Access
+Default	Requires Node Port
+Used for Pod-to-Pod communication	Used for Browser access
+Q12. Explain Service Discovery using your Ecommerce Project.
+
+Answer:
+
+Frontend Pods communicate with backend using:
+
+ecommerce-backend-service
+
+instead of Pod IP addresses.
+
+CoreDNS resolves the service name.
+
+The Service load balances traffic across backend Pods.
+
+Quick Revision
+Pod
+ ↓
+Label
+ ↓
+Service
+ ↓
+Endpoints
+ ↓
+DNS
+ ↓
+Ingress
+Ecommerce Project Mapping
+Browser
+   |
+   |
+Ingress
+   |
+   +---------> Frontend Service
+   |
+   +---------> Backend Service
+                     |
+                     |
+             Backend Pod-1
+             Backend Pod-2
+
+Backend
+   |
+   |
+MySQL Service
+   |
+   |
+mysql-0
+mysql-1

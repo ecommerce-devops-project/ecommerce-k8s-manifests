@@ -1,0 +1,1439 @@
+SECTION 4: CONFIGMAPS → SECRETS → ENVIRONMENT VARIABLES → PV → PVC → STORAGE CLASS
+Why Do We Need ConfigMaps & Secrets?
+
+Imagine your backend application contains:
+
+const PORT = 3000;
+const DB_USER = "admin";
+const DB_PASSWORD = "password123";
+
+Problem:
+
+Configuration is hardcoded
+Password is exposed
+Changing values requires rebuilding image
+Solution
+
+Kubernetes provides:
+
+ConfigMap  -> Non-sensitive data
+Secret     -> Sensitive data
+ConfigMaps
+What is a ConfigMap?
+
+A ConfigMap stores application configuration separately from the container image.
+
+Examples:
+
+PORT
+NODE_ENV
+API_URL
+LOG_LEVEL
+Why Use ConfigMaps?
+
+Without ConfigMap:
+
+Change Configuration
+      ↓
+Rebuild Docker Image
+      ↓
+Redeploy
+
+With ConfigMap:
+
+Update ConfigMap
+      ↓
+Restart Pod
+
+Much easier.
+
+Example ConfigMap
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: backend-config
+
+data:
+  PORT: "3000"
+  NODE_ENV: "development"
+Using ConfigMap
+env:
+  - name: PORT
+    valueFrom:
+      configMapKeyRef:
+        name: backend-config
+        key: PORT
+Commands
+
+Create ConfigMap
+
+kubectl create configmap backend-config \
+--from-literal=PORT=3000
+
+Get ConfigMaps
+
+kubectl get configmaps
+
+Describe ConfigMap
+
+kubectl describe configmap backend-config
+Ecommerce Example
+
+Backend configuration:
+
+PORT=3000
+NODE_ENV=development
+
+Ideal ConfigMap candidates.
+
+Secrets
+What is a Secret?
+
+Stores sensitive information.
+
+Examples:
+
+Database Password
+JWT Secret
+API Keys
+AWS Credentials
+Why Not ConfigMap?
+
+ConfigMap is plain text.
+
+Secrets provide:
+
+Base64 Encoding
+Access Control
+Better Security
+Example Secret
+apiVersion: v1
+kind: Secret
+
+metadata:
+  name: backend-secret
+
+type: Opaque
+
+data:
+  DB_PASSWORD: cGFzc3dvcmQxMjM=
+Decode Secret
+echo cGFzc3dvcmQxMjM= | base64 -d
+
+Output:
+
+password123
+Use Secret in Pod
+env:
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: backend-secret
+        key: DB_PASSWORD
+Commands
+
+Get Secrets
+
+kubectl get secrets
+
+Describe Secret
+
+kubectl describe secret backend-secret
+
+View Secret
+
+kubectl get secret backend-secret -o yaml
+Ecommerce Example
+
+You already used:
+
+secret:
+  DB_USERNAME: "admin"
+  DB_PASSWORD: "password123"
+  JWT_SECRET: "ecommerce-jwt-secret"
+
+inside:
+
+backend-deployment.yaml
+Environment Variables
+What are Environment Variables?
+
+Values injected into containers during runtime.
+
+Example:
+
+env:
+  - name: PORT
+    value: "3000"
+
+Inside Container:
+
+echo $PORT
+
+Output:
+
+3000
+Why?
+
+Application reads configuration dynamically.
+
+Example Node.js:
+
+const port = process.env.PORT;
+Ecommerce Example
+
+Backend Deployment:
+
+env:
+  - name: PORT
+    value: "3000"
+
+  - name: NODE_ENV
+    value: "development"
+
+  - name: DB_USERNAME
+    value: "admin"
+
+  - name: DB_PASSWORD
+    value: "password123"
+Persistent Volumes (PV)
+Why Storage Is Needed?
+
+Suppose:
+
+MySQL Pod Running
+
+Data:
+
+Users
+Orders
+Products
+
+Pod crashes:
+
+kubectl delete pod mysql-0
+
+Without storage:
+
+Data Lost ❌
+Solution
+
+Persistent Volume
+
+What is PV?
+
+A Persistent Volume is actual storage available to the cluster.
+
+Think of it as:
+
+Hard Disk for Kubernetes
+Example
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: ecommerce-backend-pv
+
+spec:
+  capacity:
+    storage: 1Gi
+Commands
+
+Get PV
+
+kubectl get pv
+
+Describe PV
+
+kubectl describe pv
+Persistent Volume Claim (PVC)
+What is PVC?
+
+PVC is a request for storage.
+
+Think:
+
+PV  = Actual Disk
+
+PVC = Request For Disk
+Example
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: ecommerce-backend-pvc
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 1Gi
+Relationship
+PVC
+ ↓
+PV
+ ↓
+Storage
+Your Project Example
+
+Backend Deployment:
+
+volumes:
+  - name: ecommerce-storage
+    persistentVolumeClaim:
+      claimName: ecommerce-backend-pvc
+
+Mounted:
+
+volumeMounts:
+  - name: ecommerce-storage
+    mountPath: /data
+Commands
+
+Get PVC
+
+kubectl get pvc
+
+Describe PVC
+
+kubectl describe pvc
+Your Actual Output
+NAME                    STATUS
+ecommerce-backend-pvc   Bound
+mysql-data-mysql-0      Bound
+mysql-data-mysql-1      Bound
+Meaning
+PVC Successfully Connected To PV
+StatefulSet + PVC
+Why MySQL Uses PVC?
+
+Database stores:
+
+Users
+Orders
+Products
+Payments
+
+If Pod restarts:
+
+kubectl delete pod mysql-0
+
+Data must survive.
+
+What You Practiced
+
+Delete MySQL Pod:
+
+kubectl delete pod mysql-0 -n ecommerce
+
+New Pod Created:
+
+mysql-0
+
+Data still exists because:
+
+PVC Attached
+Interview Question
+Q1. Why StatefulSet Instead of Deployment for MySQL?
+
+Answer:
+
+StatefulSet provides:
+
+Stable Pod Names
+Persistent Storage
+Ordered Startup
+Ordered Shutdown
+
+required for databases.
+
+Storage Classes
+Problem Before StorageClass
+
+Admin manually creates:
+
+PV
+PV
+PV
+PV
+
+Every time.
+
+Solution
+
+StorageClass
+
+Automatically creates PVs.
+
+Architecture
+PVC
+ ↓
+StorageClass
+ ↓
+Dynamic PV Creation
+Your Cluster
+
+Check:
+
+kubectl get storageclass
+
+You likely saw:
+
+standard
+Your Actual PVC Output
+mysql-data-mysql-0
+StorageClass: standard
+
+mysql-data-mysql-1
+StorageClass: standard
+
+Meaning:
+
+PV Created Automatically
+Dynamic Provisioning
+Traditional
+Admin Creates PV
+      ↓
+User Creates PVC
+Dynamic
+User Creates PVC
+      ↓
+StorageClass Creates PV Automatically
+Interview Questions
+Q2. Difference Between ConfigMap and Secret?
+ConfigMap	Secret
+Non-sensitive	Sensitive
+Plain Text	Encoded
+PORT	Password
+Q3. What Happens If Pod Restarts?
+
+Answer:
+
+Pod gets new IP.
+
+If PVC attached:
+
+Data Survives
+
+Otherwise:
+
+Data Lost
+Q4. Difference Between PV and PVC?
+PV	PVC
+Actual Storage	Request for Storage
+Created by Admin	Created by User
+Resource	Claim
+Q5. What is StorageClass?
+
+Answer:
+
+StorageClass enables dynamic provisioning of Persistent Volumes.
+
+Q6. Explain Storage in Your Ecommerce Project
+
+Answer:
+
+MySQL runs in StatefulSet.
+
+Each MySQL Pod receives:
+
+Dedicated PVC
+
+Storage persists even if Pods are deleted.
+
+Q7. What Happens If mysql-0 Crashes?
+
+Answer:
+
+StatefulSet recreates mysql-0.
+
+The same PVC is reattached.
+
+Database data remains intact.
+
+Troubleshooting Storage
+
+Check PV
+
+kubectl get pv
+
+Check PVC
+
+kubectl get pvc
+
+Describe PVC
+
+kubectl describe pvc
+
+Check Volume Mounts
+
+kubectl describe pod mysql-0
+Quick Revision
+ConfigMap
+    ↓
+Application Config
+
+Secret
+    ↓
+Passwords / Tokens
+
+Environment Variables
+    ↓
+Runtime Configuration
+
+PVC
+    ↓
+PV
+    ↓
+StorageClass
+    ↓
+Disk
+Ecommerce Project Mapping
+Node.js Backend
+      |
+      +--> ConfigMap
+      |      PORT
+      |      NODE_ENV
+      |
+      +--> Secret
+             DB_PASSWORD
+             JWT_SECRET
+
+MySQL StatefulSet
+      |
+      +--> PVC
+             |
+             v
+           PV
+             |
+             v
+        Persistent Storage
+.................................................................................
+
+SECTION 5: STATEFULSETS → DAEMONSETS → JOBS → CRONJOBS
+
+This section is extremely important because you have already implemented all four in your ecommerce Kubernetes project.
+
+StatefulSets
+What is a StatefulSet?
+
+A StatefulSet is used for applications that need:
+
+Stable Identity
+Persistent Storage
+Ordered Startup
+Ordered Shutdown
+
+Examples:
+
+MySQL
+PostgreSQL
+MongoDB
+Kafka
+Redis Cluster
+Why Not Deployment?
+
+Deployment Pods are interchangeable.
+
+Example:
+
+backend-pod-x7a
+backend-pod-y8b
+
+If one dies:
+
+New Random Pod Created
+
+Perfect for stateless apps.
+
+But databases need:
+
+Fixed Hostname
+Fixed Storage
+StatefulSet Architecture
+StatefulSet
+      |
+      |
+      +------ mysql-0
+      |
+      +------ mysql-1
+
+Unlike Deployments:
+
+backend-xyz
+backend-abc
+backend-pqr
+What You Practiced
+
+You created:
+
+mysql-0
+mysql-1
+Verify
+kubectl get pods -n ecommerce
+
+Output:
+
+mysql-0
+mysql-1
+
+Notice:
+
+Names Never Change
+Stable Network Identity
+
+Each Pod gets:
+
+mysql-0.mysql
+mysql-1.mysql
+Stable Storage
+
+Each Pod gets its own PVC.
+
+You verified:
+
+kubectl get pvc -n ecommerce
+
+Output:
+
+mysql-data-mysql-0
+mysql-data-mysql-1
+Recovery Test (You Performed This)
+
+Delete Pod:
+
+kubectl delete pod mysql-0 -n ecommerce
+
+Result:
+
+mysql-0 recreated
+
+Same name.
+
+Same storage.
+
+Same data.
+
+Interview Question
+Q1. Why StatefulSet for MySQL?
+
+Answer:
+
+Because MySQL requires:
+
+Persistent Storage
+Stable Hostname
+Ordered Operations
+
+which Deployments cannot provide.
+
+DaemonSets
+What is a DaemonSet?
+
+DaemonSet ensures:
+
+One Pod Per Node
+Why?
+
+Some applications must run on every node.
+
+Examples:
+
+Fluentd
+Prometheus Node Exporter
+Datadog Agent
+Security Scanners
+DaemonSet Architecture
+
+Suppose:
+
+Node-1
+Node-2
+Node-3
+
+DaemonSet creates:
+
+Node-1 -> Pod
+Node-2 -> Pod
+Node-3 -> Pod
+
+Automatically.
+
+What You Practiced
+
+Created:
+
+nginx-daemonset
+Verify
+kubectl get daemonset -n ecommerce
+
+Output:
+
+DESIRED   CURRENT   READY
+
+1         1         1
+
+Because Minikube has:
+
+1 Node
+If Cluster Had 3 Nodes
+
+DaemonSet would create:
+
+3 Pods
+
+Automatically.
+
+Why DaemonSet?
+
+Without DaemonSet:
+
+Manually Create Pod On Every Node
+
+With DaemonSet:
+
+Automatic
+Interview Question
+Q2. Difference Between Deployment and DaemonSet?
+Deployment	DaemonSet
+User decides replicas	Kubernetes decides
+Scale manually	One pod per node
+App workloads	Monitoring/Logging
+Jobs
+What is a Job?
+
+Job runs:
+
+One Time
+
+and exits.
+
+Use Cases
+Database Migration
+Data Import
+Report Generation
+Backup
+Batch Processing
+Job Lifecycle
+Create Job
+      |
+      v
+Pod Starts
+      |
+      v
+Task Executes
+      |
+      v
+Completed
+What You Practiced
+
+Created:
+
+demo-job
+Verify
+kubectl get jobs -n ecommerce
+
+Output:
+
+demo-job
+Complete
+Pod Status
+kubectl get pods -n ecommerce
+
+Output:
+
+demo-job-xxxxx
+
+Completed
+View Logs
+kubectl logs demo-job-xxxxx -n ecommerce
+Interview Question
+Q3. Difference Between Deployment and Job?
+Deployment	Job
+Runs forever	Runs once
+Web applications	Batch tasks
+Restarts automatically	Ends after completion
+CronJobs
+What is a CronJob?
+
+CronJob executes Jobs on a schedule.
+
+Think:
+
+Linux Cron
++
+Kubernetes Job
+Use Cases
+Database Backup
+Cleanup
+Reports
+Email Notifications
+ETL Jobs
+Cron Schedule Format
+* * * * *
+│ │ │ │ │
+│ │ │ │ └ Day Of Week
+│ │ │ └ Month
+│ │ └ Day
+│ └ Hour
+└ Minute
+Examples
+
+Every Minute:
+
+* * * * *
+
+Every Hour:
+
+0 * * * *
+
+Every Day 2AM:
+
+0 2 * * *
+What You Practiced
+
+Created:
+
+backup-cronjob
+
+Schedule:
+
+* * * * *
+
+Every minute.
+
+Verify
+kubectl get cronjobs -n ecommerce
+
+Output:
+
+backup-cronjob
+Verify Generated Jobs
+kubectl get jobs -n ecommerce
+
+Output:
+
+backup-cronjob-29686011
+backup-cronjob-29686012
+backup-cronjob-29686013
+Verify Logs
+kubectl logs backup-cronjob-29686013-xxxxx -n ecommerce
+
+Output:
+
+Database backup started
+Backup completed
+Why Were Multiple Pods Created?
+
+Every minute:
+
+CronJob
+      ↓
+Creates Job
+      ↓
+Creates Pod
+      ↓
+Completes
+How You Stopped It
+
+Delete CronJob:
+
+kubectl delete cronjob backup-cronjob -n ecommerce
+
+Or suspend:
+
+kubectl patch cronjob backup-cronjob \
+-p '{"spec":{"suspend":true}}'
+Real Ecommerce Example
+
+Every Night:
+
+2:00 AM
+
+CronJob:
+
+Backup MySQL Database
+
+Flow:
+
+CronJob
+    ↓
+Job
+    ↓
+Backup Pod
+    ↓
+S3 Upload
+    ↓
+Completed
+Interview Questions
+Q4. Difference Between Job and CronJob?
+Job	CronJob
+Runs once	Runs repeatedly
+Manual execution	Scheduled execution
+One-time task	Recurring task
+Q5. What happens if CronJob schedule is every minute?
+
+Answer:
+
+Every minute Kubernetes creates a new Job which creates a new Pod.
+
+Q6. How do you stop a CronJob?
+
+Answer:
+
+kubectl delete cronjob NAME
+
+or
+
+kubectl patch cronjob NAME \
+-p '{"spec":{"suspend":true}}'
+Q7. Explain StatefulSet using your project.
+
+Answer:
+
+We deployed MySQL using StatefulSet.
+
+Benefits:
+
+mysql-0
+mysql-1
+
+Stable Names
+Persistent Storage
+Ordered Recovery
+
+Deleting mysql-0 recreated the Pod while preserving data.
+
+Q8. Explain CronJob using your project.
+
+Answer:
+
+We implemented a database backup CronJob that executed every minute and generated backup Jobs automatically.
+
+Quick Revision
+Deployment
+      ↓
+Stateless Apps
+
+StatefulSet
+      ↓
+Databases
+
+DaemonSet
+      ↓
+One Pod Per Node
+
+Job
+      ↓
+Run Once
+
+CronJob
+      ↓
+Run On Schedule
+Ecommerce Project Mapping
+Frontend
+   ↓
+Deployment
+
+Backend
+   ↓
+Deployment
+
+MySQL
+   ↓
+StatefulSet
+
+Node Monitoring
+   ↓
+DaemonSet
+
+Database Migration
+   ↓
+Job
+
+Database Backup
+   ↓
+CronJob
+
+.................................................
+SECTION 6: RBAC → SERVICE ACCOUNTS → ROLES → ROLEBINDINGS → CLUSTERROLES → CLUSTERROLEBINDINGS → SECURITY BEST PRACTICES
+Why RBAC?
+
+RBAC stands for:
+
+Role-Based Access Control
+
+RBAC controls:
+
+Who can access Kubernetes?
+What can they do?
+Which resources can they access?
+
+Without RBAC:
+
+Everyone can do everything ❌
+
+With RBAC:
+
+Admin -> Full Access
+Developer -> Deployment Access
+Viewer -> Read Only Access
+Real World Example
+
+Suppose your team has:
+
+Pallavi     -> DevOps Engineer
+Rahul       -> Developer
+Manager     -> Viewer
+
+Requirements:
+
+Pallavi -> Create/Delete Everything
+Rahul   -> Deploy Applications Only
+Manager -> View Resources Only
+
+RBAC enforces this.
+
+RBAC Components
+ServiceAccount
+      ↓
+Role
+      ↓
+RoleBinding
+
+Cluster-wide:
+
+ServiceAccount
+      ↓
+ClusterRole
+      ↓
+ClusterRoleBinding
+Service Accounts
+What is a Service Account?
+
+A Service Account is an identity used by Pods to communicate with the Kubernetes API.
+
+Think:
+
+User Account
+      ↓
+Human
+
+Service Account
+      ↓
+Application
+Default Service Account
+
+Every namespace gets:
+
+default
+
+Check:
+
+kubectl get sa -n ecommerce
+
+Output:
+
+default
+Example
+
+Create Service Account
+
+apiVersion: v1
+kind: ServiceAccount
+
+metadata:
+  name: backend-sa
+  namespace: ecommerce
+
+Apply:
+
+kubectl apply -f serviceaccount.yaml
+Verify
+kubectl get sa -n ecommerce
+Why Use Service Accounts?
+
+Suppose Backend needs:
+
+Read ConfigMaps
+Read Secrets
+
+Instead of giving full admin rights:
+
+Create Service Account
+Assign Limited Permissions
+Roles
+What is a Role?
+
+A Role defines permissions within a namespace.
+
+Example:
+
+Can Read Pods
+Can Read Services
+Cannot Delete Pods
+Role Example
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+
+metadata:
+  namespace: ecommerce
+  name: pod-reader
+
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get","list","watch"]
+Meaning
+
+Allowed:
+
+kubectl get pods
+kubectl describe pods
+
+Not Allowed:
+
+kubectl delete pod
+Verbs
+
+Common Verbs:
+
+Verb	Meaning
+get	Read one resource
+list	Read multiple
+watch	Monitor changes
+create	Create resource
+update	Modify resource
+patch	Partial update
+delete	Delete resource
+Interview Question
+Q1. What is a Role?
+
+Answer:
+
+A Role defines permissions for resources within a namespace.
+
+RoleBinding
+What is RoleBinding?
+
+RoleBinding connects:
+
+Role
+     ↓
+User/ServiceAccount
+Example
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+
+metadata:
+  name: read-pods-binding
+  namespace: ecommerce
+
+subjects:
+- kind: ServiceAccount
+  name: backend-sa
+
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+Flow
+backend-sa
+      ↓
+RoleBinding
+      ↓
+pod-reader Role
+      ↓
+Can Read Pods
+Verify
+kubectl get rolebindings -n ecommerce
+Interview Question
+Q2. What is RoleBinding?
+
+Answer:
+
+RoleBinding grants the permissions defined in a Role to a User, Group, or ServiceAccount.
+
+ClusterRole
+Problem with Role
+
+Role only works:
+
+Inside One Namespace
+
+Example:
+
+ecommerce namespace only
+Solution
+
+ClusterRole
+
+Works across:
+
+Entire Cluster
+Example
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+
+metadata:
+  name: node-reader
+
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get","list"]
+Why?
+
+Nodes are cluster-wide resources.
+
+Verify
+kubectl get clusterroles
+Interview Question
+Q3. Difference Between Role and ClusterRole?
+Role	ClusterRole
+Namespace Scope	Cluster Scope
+Limited Access	Cluster-wide Access
+Pods, Services	Nodes, Namespaces
+ClusterRoleBinding
+What is ClusterRoleBinding?
+
+ClusterRoleBinding grants:
+
+ClusterRole
+        ↓
+User/ServiceAccount
+
+across the entire cluster.
+
+Example
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+
+metadata:
+  name: node-reader-binding
+
+subjects:
+- kind: ServiceAccount
+  name: backend-sa
+  namespace: ecommerce
+
+roleRef:
+  kind: ClusterRole
+  name: node-reader
+  apiGroup: rbac.authorization.k8s.io
+Flow
+backend-sa
+      ↓
+ClusterRoleBinding
+      ↓
+node-reader
+      ↓
+Can Read Nodes
+Verify
+kubectl get clusterrolebindings
+Authentication vs Authorization
+
+Very Common Interview Question
+
+Authentication
+
+Question:
+
+Who Are You?
+
+Examples:
+
+Username
+Token
+Certificate
+Authorization
+
+Question:
+
+What Can You Do?
+
+Handled by:
+
+RBAC
+Flow
+User Login
+      ↓
+Authentication
+      ↓
+RBAC Check
+      ↓
+Authorization
+      ↓
+Allow / Deny
+Real Ecommerce Example
+
+Suppose:
+
+Backend Application
+
+needs:
+
+Read ConfigMaps
+Read Secrets
+
+Create:
+
+Service Account
+      ↓
+Role
+      ↓
+RoleBinding
+
+Instead of:
+
+Cluster Admin Access ❌
+Security Best Practices
+1. Least Privilege Principle
+
+Grant only required permissions.
+
+Bad:
+
+Cluster Admin Everywhere ❌
+
+Good:
+
+Read Only Access ✅
+2. Use Service Accounts
+
+Avoid:
+
+Default Service Account
+
+Create dedicated accounts.
+
+Example:
+
+frontend-sa
+backend-sa
+monitoring-sa
+3. Protect Secrets
+
+Avoid:
+
+DB_PASSWORD: password123
+
+Use:
+
+Kubernetes Secrets
+4. Use Network Policies
+
+Restrict communication.
+
+Example:
+
+Frontend → Backend ✅
+
+Frontend → MySQL ❌
+5. Restrict Namespace Access
+
+Example:
+
+Developer
+
+Should not access:
+
+kube-system
+6. Regularly Rotate Credentials
+
+Rotate:
+
+JWT Secret
+API Keys
+Database Passwords
+Useful Commands
+Service Accounts
+kubectl get sa
+kubectl describe sa default
+Roles
+kubectl get roles -n ecommerce
+kubectl describe role ROLE_NAME
+RoleBindings
+kubectl get rolebindings -n ecommerce
+ClusterRoles
+kubectl get clusterroles
+ClusterRoleBindings
+kubectl get clusterrolebindings
+Interview Questions
+Q4. What is RBAC?
+
+Answer:
+
+RBAC (Role-Based Access Control) controls who can perform what actions on Kubernetes resources.
+
+Q5. What is a Service Account?
+
+Answer:
+
+A Service Account provides an identity for Pods to interact with the Kubernetes API.
+
+Q6. Difference Between User and Service Account?
+User	Service Account
+Human	Application
+Login	Pod Identity
+External	Kubernetes Resource
+Q7. Why Not Use Cluster Admin Everywhere?
+
+Answer:
+
+It violates the principle of least privilege and increases security risks.
+
+Q8. Explain RBAC Using Your Ecommerce Project
+
+Answer:
+
+In production, backend applications should use dedicated Service Accounts with Roles granting only required permissions, such as reading ConfigMaps and Secrets, instead of using cluster-admin access.
+
+Quick Revision
+Authentication
+      ↓
+Who Are You?
+
+Authorization
+      ↓
+What Can You Do?
+
+RBAC Components
+
+ServiceAccount
+      ↓
+Role
+      ↓
+RoleBinding
+
+OR
+
+ServiceAccount
+      ↓
+ClusterRole
+      ↓
+ClusterRoleBinding
+Ecommerce Project Mapping
+Backend Pod
+      ↓
+backend-sa
+      ↓
+Role
+      ↓
+Read ConfigMaps
+Read Secrets
+
+Frontend Pod
+      ↓
+frontend-sa
+      ↓
+Limited Access
+
+Admin User
+      ↓
+ClusterRole
+      ↓
+Full Cluster Access
