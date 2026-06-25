@@ -1,0 +1,787 @@
+SECTION 7: HPA → METRICS SERVER → SCALING → RESOURCE REQUESTS & LIMITS → CPU & MEMORY MANAGEMENT
+
+This is one of the most frequently asked Kubernetes interview topics because it directly impacts:
+
+Performance
+Availability
+Cost Optimization
+Auto Scaling
+
+You have already worked with HPA conceptually, so let's connect it with your Ecommerce project.
+
+Why Scaling is Needed?
+
+Imagine your Ecommerce application gets:
+
+Normal Traffic:
+100 Users
+
+Pods:
+
+Backend Pods = 2
+
+Everything works fine.
+
+Suddenly:
+
+Big Sale Starts
+
+Traffic:
+
+100 → 10,000 Users
+
+Backend Pods:
+
+2 Pods
+
+Problem:
+
+High CPU
+Slow Response
+Application Crash
+Solution
+
+Horizontal Pod Autoscaler (HPA)
+
+What is HPA?
+
+HPA automatically increases or decreases Pod count based on metrics.
+
+Example:
+
+CPU Usage Increases
+      ↓
+HPA Adds Pods
+
+CPU Usage Decreases
+      ↓
+HPA Removes Pods
+HPA Architecture
+Users
+   |
+   |
+Backend Pods
+   |
+   |
+CPU Usage
+   |
+   |
+Metrics Server
+   |
+   |
+HPA
+   |
+   |
+Scale Up / Down
+Example
+
+Initial:
+
+Backend Pods = 2
+CPU = 30%
+
+No action.
+
+Traffic increases:
+
+CPU = 80%
+
+HPA scales:
+
+2 Pods
+ ↓
+4 Pods
+
+Traffic drops:
+
+CPU = 20%
+
+HPA scales:
+
+4 Pods
+ ↓
+2 Pods
+Metrics Server
+What is Metrics Server?
+
+Metrics Server collects:
+
+CPU Usage
+Memory Usage
+
+from Pods and Nodes.
+
+Without Metrics Server:
+
+HPA Cannot Work
+Verify Metrics Server
+
+You already checked:
+
+kubectl get pods -n kube-system
+
+Output included:
+
+metrics-server
+Check Metrics
+
+Node Metrics
+
+kubectl top nodes
+
+Pod Metrics
+
+kubectl top pods -n ecommerce
+
+Example:
+
+NAME                     CPU     MEMORY
+
+ecommerce-backend        15m     120Mi
+mysql-0                  20m     220Mi
+frontend                 5m      50Mi
+Interview Question
+Q1. Why is Metrics Server required?
+
+Answer:
+
+Metrics Server provides CPU and memory usage metrics used by HPA for scaling decisions.
+
+Resource Requests
+What is Request?
+
+Request is the minimum resource Kubernetes reserves for a container.
+
+Example:
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+
+Meaning:
+
+CPU    = 0.2 Core
+Memory = 256 MB
+Why Requests?
+
+Scheduler uses requests when deciding:
+
+Which Node Should Run This Pod?
+Example
+
+Node Capacity:
+
+CPU = 2 Core
+
+Pod Request:
+
+CPU = 500m
+
+Possible Pods:
+
+4 Pods
+
+because:
+
+500m × 4 = 2000m
+Interview Question
+Q2. What are Resource Requests?
+
+Answer:
+
+Requests define the minimum CPU and memory required by a container and are used by the scheduler.
+
+Resource Limits
+What is Limit?
+
+Maximum resource a Pod can consume.
+
+Example:
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+Meaning:
+
+CPU cannot exceed 0.5 Core
+Memory cannot exceed 512 MB
+Why Limits?
+
+Without limits:
+
+One Pod Consumes Entire Node
+
+Other Pods:
+
+Crash
+Become Slow
+Interview Question
+Q3. What are Resource Limits?
+
+Answer:
+
+Limits define the maximum CPU and memory a container can consume.
+
+Requests vs Limits
+
+Example:
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+Meaning:
+
+Reserve:
+CPU = 200m
+
+Can Burst To:
+CPU = 500m
+Easy Analogy
+
+Imagine a Hotel.
+
+Request:
+
+Reserved Room
+
+Limit:
+
+Maximum Rooms Allowed
+CPU Units
+What is 1000m?
+1000m = 1 CPU Core
+
+Examples:
+
+100m = 0.1 CPU
+250m = 0.25 CPU
+500m = 0.5 CPU
+1000m = 1 CPU
+Memory Units
+
+Examples:
+
+128Mi
+256Mi
+512Mi
+1Gi
+2Gi
+
+Conversions:
+
+1024Mi = 1Gi
+Example for Ecommerce Backend
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+Meaning:
+
+Reserve:
+0.2 CPU
+256 MB
+
+Maximum:
+0.5 CPU
+512 MB
+HPA Configuration
+
+Example:
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+metadata:
+  name: backend-hpa
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ecommerce-backend
+
+  minReplicas: 2
+  maxReplicas: 10
+
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+Meaning
+Minimum Pods = 2
+
+Maximum Pods = 10
+
+Target CPU = 70%
+
+If CPU exceeds:
+
+70%
+
+Scale up.
+
+If CPU drops:
+
+Below 70%
+
+Scale down.
+
+Commands
+
+Create HPA
+
+kubectl apply -f hpa.yaml
+
+View HPA
+
+kubectl get hpa
+
+Detailed Information
+
+kubectl describe hpa
+
+Watch Scaling
+
+kubectl get hpa -w
+Real Ecommerce Example
+
+Normal Traffic:
+
+Backend Pods = 2
+CPU = 30%
+
+No scaling.
+
+Big Sale:
+
+CPU = 85%
+
+HPA:
+
+2 Pods
+ ↓
+4 Pods
+ ↓
+6 Pods
+
+Traffic Reduces:
+
+CPU = 20%
+
+HPA:
+
+6 Pods
+ ↓
+4 Pods
+ ↓
+2 Pods
+HPA vs Manual Scaling
+
+Manual:
+
+kubectl scale deployment ecommerce-backend \
+--replicas=5
+
+Problem:
+
+Human Intervention Required
+
+HPA:
+
+Automatic Scaling
+Vertical Pod Autoscaler (VPA)
+
+Interview Bonus Topic
+
+HPA
+
+Changes:
+
+Number Of Pods
+
+Example:
+
+2 Pods → 5 Pods
+VPA
+
+Changes:
+
+CPU
+Memory
+
+Example:
+
+256Mi → 512Mi
+Interview Question
+Q4. Difference Between HPA and VPA?
+HPA	VPA
+Scales Pods	Scales Resources
+More Replicas	More CPU/Memory
+Most Common	Less Common
+Troubleshooting HPA
+
+Check Metrics Server
+
+kubectl get pods -n kube-system
+
+Check Metrics
+
+kubectl top pods
+
+Check HPA
+
+kubectl describe hpa
+
+Common Error
+
+Metrics API not available
+
+Cause:
+
+Metrics Server Missing
+Interview Questions
+Q5. Why is HPA important?
+
+Answer:
+
+HPA automatically adjusts Pod count based on CPU or memory usage, improving performance and reducing costs.
+
+Q6. What metric is most commonly used by HPA?
+
+Answer:
+
+CPU utilization.
+
+Q7. Can HPA work without Requests?
+
+Answer:
+
+No. HPA calculates utilization based on resource requests.
+
+Q8. Explain HPA using your Ecommerce Project.
+
+Answer:
+
+In the Ecommerce backend Deployment, HPA can monitor CPU utilization and automatically scale Pods from 2 to 10 during high traffic events such as a sale.
+
+Q9. What happens if a Pod exceeds memory limit?
+
+Answer:
+
+The container is terminated with:
+
+OOMKilled
+
+(Out Of Memory Killed)
+
+Q10. What happens if a Pod exceeds CPU limit?
+
+Answer:
+
+CPU usage is throttled but the Pod continues running.
+
+Quick Revision
+Metrics Server
+      ↓
+Collects CPU/Memory
+
+Requests
+      ↓
+Minimum Reserved Resources
+
+Limits
+      ↓
+Maximum Allowed Resources
+
+HPA
+      ↓
+Automatic Pod Scaling
+
+VPA
+      ↓
+Automatic Resource Scaling
+Ecommerce Project Mapping
+Users
+   |
+   |
+Backend Deployment
+   |
+   |
+CPU Usage
+   |
+Metrics Server
+   |
+HPA
+   |
+Scale Pods
+
+2 Pods
+ ↓
+4 Pods
+ ↓
+8 Pods
+
+Traffic Drops
+
+8 Pods
+ ↓
+4 Pods
+ ↓
+2 Pods
+......................................
+
+SECTION 8: TAINTS & TOLERATIONS → NODE AFFINITY → NODE SELECTOR → SCHEDULING → POD PLACEMENT
+
+This section is very important because it answers one of the most common Kubernetes interview questions:
+
+How does Kubernetes decide where to run a Pod?
+
+You have already practiced:
+
+Taints
+Tolerations
+Node Affinity
+Node Labels
+Scheduling Failures
+
+So let's connect everything together.
+
+Kubernetes Scheduler
+What is Scheduler?
+
+Scheduler decides:
+
+Which Pod
+      ↓
+Runs On Which Node
+Example
+
+Cluster:
+
+Node-1
+Node-2
+Node-3
+
+Pods:
+
+Frontend
+Backend-1
+Backend-2
+MySQL
+
+Scheduler decides placement.
+
+Scheduler Checks
+CPU Available?
+Memory Available?
+Taints?
+Affinity Rules?
+Node Selectors?
+
+Then schedules the Pod.
+
+Default Scheduling
+
+Without any rules:
+
+apiVersion: v1
+kind: Pod
+
+Scheduler chooses:
+
+Any Available Node
+Real Example
+
+You have:
+
+kubectl get nodes -o wide
+
+Output:
+
+minikube
+
+Only:
+
+1 Node
+
+So every Pod runs there.
+
+Node Labels
+What are Labels?
+
+Labels are key-value pairs attached to Nodes.
+
+Example:
+
+env=dev
+zone=us-east
+type=backend
+View Labels
+kubectl get nodes --show-labels
+Add Label
+
+You practiced:
+
+kubectl label nodes minikube env=dev
+Verify
+kubectl get nodes --show-labels
+
+Output contains:
+
+env=dev
+Node Selector
+What is Node Selector?
+
+Simplest way to force Pod placement.
+
+Example:
+
+nodeSelector:
+  env: dev
+
+Meaning:
+
+Run Only On Node
+Where env=dev
+Architecture
+Node-1
+env=dev
+     ↑
+     |
+Pod Requires env=dev
+
+Scheduler places Pod there.
+
+Example
+spec:
+  nodeSelector:
+    env: dev
+Interview Question
+Q1. What is Node Selector?
+
+Answer:
+
+Node Selector is the simplest scheduling mechanism that places Pods on nodes matching specified labels.
+
+Problem with Node Selector
+
+Only supports:
+
+Exact Match
+
+Example:
+
+env=dev
+
+Cannot do:
+
+env=dev OR staging
+
+or
+
+zone != us-east
+Solution
+
+Node Affinity
+
+Node Affinity
+What is Node Affinity?
+
+Advanced scheduling using labels.
+
+More powerful than Node Selector.
+
+Example
+
+You created:
+
+affinity-demo
+
+and saw:
+
+Pending
+Why?
+
+Your YAML required:
+
+env=dev
+
+but node did not have that label.
+
+Actual Error
+
+You saw:
+
+0/1 nodes are available:
+
+didn't match Pod's node affinity
+Then You Fixed It
+
+Added label:
+
+kubectl label node minikube env=dev
+
+Pod immediately:
+
+Pending
+ ↓
+Running
+Architecture
+Pod
+ |
+ | Requires
+ |
+env=dev
+ |
+ |
+Node
+env=dev
+
+Match found.
+
+Pod scheduled.
+
+Node Affinity Example
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: env
+          operator: In
+          values:
+          - dev
+Important Operators
+In
+env IN (dev)
+NotIn
+env NOT IN (prod)
+Exists
+env exists
+DoesNotExist
+env does not exist
+Interview Question
+Q2. Difference Between Node Selector and Node Affinity?
+Node Selector	Node Affinity
+Simple	Advanced
+Exact Match	Flexible Rules
+Limited	Powerful
+Older	Recommended
+Taints
