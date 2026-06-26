@@ -1,12 +1,18 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
+
 metadata:
   name: ecommerce-backend-pvc
   namespace: ecommerce
+
 spec:
   accessModes:
     - ReadWriteOnce
+
+  storageClassName: ""
+
+  volumeName: ecommerce-backend-pv
+
   resources:
     requests:
       storage: 1Gi
-  volumeName: ecommerce-backend-pv
